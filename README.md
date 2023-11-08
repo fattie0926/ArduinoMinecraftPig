@@ -18,7 +18,7 @@ ArduinoMinecraftPig 是一個創新專案，目的在於利用 Arduino 和 Pixy2
 1. 克隆存儲庫到您的機器上。
 
 ```
-git clone https://github.com/your-username/ArduinoMinecraftPig.git
+git clone https://github.com/fattie0926/ArduinoMinecraftPig.git
 ```
 2. 安裝所有必要的開發工具和庫。
 3. 開啟 Arduino IDE，編譯並上傳代碼到您的 Arduino 板。
