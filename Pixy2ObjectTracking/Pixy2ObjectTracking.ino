@@ -4,24 +4,24 @@
 Pixy2 pixy;
 
 // Speed : 0 ~ 100
-// Offset : -255 ~ 255
+// rotationOffset : -255 ~ 255
 
-// Initial Ports
+// Initial Pin
 const int motorLPin = 5;
 const int motorRPin = 6;
 
 // Pixy Setup
-const int CARROT_SIGNATURE = 1; // 假设胡萝卜的 Signature 為 1
+const int CARROT_SIGNATURE = 1; // 假设胡蘿蔔的 Signature 為 1
 
-// Setup Speed
-const int MAX_SPEED = 255; // 最大速度值
-const int MIN_SPEED = 0;   // 最小速度值
+// Global Setup Speed
+const int MAX_SPEED = 255; // 最大速度
+const int MIN_SPEED = 0;   // 最小速度
 
 // Global Variable
 
 
 
-// Setup motor and Pixy2
+// Setup Serial, motor and Pixy2
 void setup() {
   // Setup Serial Port
   Serial.begin(115200);
@@ -34,6 +34,9 @@ void setup() {
   pinMode(motorLPin, OUTPUT);
   pinMode(motorRPin, OUTPUT);
 }
+
+
+// Functions
 
 
 // Pixy2 Tracking
@@ -52,22 +55,23 @@ void motorControl(int speed, int rotationOffset) {
   int speedL = speed + rotationOffset;
   int speedR = speed - rotationOffset;
 
-  // 保证速度值在合理范围内
+  // 保证速度值在合理范围内（0-100）
   speedL = constrain(speedL, 0, 100);
   speedR = constrain(speedR, 0, 100);
 
-  // 将速度范围从 -100-100 映射到 PWM 范围 MIN_SPEED-MAX_SPEED
+  // 将速度范围从 0-100 映射到 PWM 范围 MIN_SPEED-MAX_SPEED
   speedL = map(speedL, 0, 100, MIN_SPEED, MAX_SPEED);
   speedR = map(speedR, 0, 100, MIN_SPEED, MAX_SPEED);
 
-  // 打印 PWM 值
+  // 透過 Function 打印 PWM 值
   printCurrentSpeed(speedL, speedR);
-
+  
+  // 寫入速度
   analogWrite(motorLPin, speedL);
   analogWrite(motorRPin, speedR);
 }
 
-void motorControlOld(int speedL, int speedR) {
+void motorControlOld(int speedL, int speedR) { // 舊版 自行輸入左右輪速度
   const int maxSpeed = 255;
   const int minSpeed = 0;
 
@@ -139,6 +143,7 @@ void followCarrot() {
 
 void interactWithHuman(int xPosition) {
     // 检测到人时的逻辑（跟随并注视）
+    // 原本打算用 ESP32-CAM 搭配 OpenCV，但發現 Ardunio 上的運算太麻煩，因此改用 Pixy2（不支援辨識人類）
 }
 
 
@@ -164,8 +169,7 @@ void testPrintPositionDiff() {
   }
 }
 
-void printCurrentSpeed(int speedL, int speedR) {
-    // 打印计算出的速度值
+void printCurrentSpeed(int speedL, int speedR) { // 列印速度數值
     Serial.print("Left Motor Speed: ");
     Serial.print(speedL);
     Serial.print(" | Right Motor Speed: ");
@@ -173,7 +177,7 @@ void printCurrentSpeed(int speedL, int speedR) {
     
 }
 
-void printCurrentSpeedWithSymbol(int speedL, int speedR) {
+void printCurrentSpeedWithSymbol(int speedL, int speedR) { // 用符號列印出速度
     Serial.print("Left Motor Speed: ");
 
     // 对于左侧马达
@@ -202,6 +206,8 @@ void printCurrentSpeedWithSymbol(int speedL, int speedR) {
 
     Serial.println();
 }
+
+
 
 // Main
 void loop() {
