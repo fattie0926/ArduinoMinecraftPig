@@ -38,8 +38,7 @@ void setup() {
 
 // Functions
 
-
-// Pixy2 Tracking
+// Calculate Offset
 int getPositionDifference(int xPosition, int middlePosition = 157) {
     int positionDifference = xPosition - middlePosition;
     int mappedDifference = map(positionDifference, -middlePosition, middlePosition, -128, 128);
