@@ -1,20 +1,24 @@
 #include <Pixy2.h>
 #include <stdio.h>
 
+#define CW  1   // 定義順時針轉動
+#define CCW 2   // 定義逆時針轉動
+
 Pixy2 pixy;
 
 // Speed : 0 ~ 100
 // rotationOffset : -255 ~ 255
 
-// Initial Pin
-const int motorLPin = 5;
-const int motorRPin = 6;
+// 定義Arduino引腳到MonsterMoto Shield的連接
+int inApin[2] = {7, 4};  // INA: 順時針輸入
+int inBpin[2] = {8, 9};  // INB: 逆時針輸入
+int pwmpin[2] = {5, 6};  // PWM輸入
 
 // Pixy Setup
 const int CARROT_SIGNATURE = 1; // 假设胡蘿蔔的 Signature 為 1
 
 // Global Setup Speed
-const int MAX_SPEED = 255; // 最大速度
+const int MAX_SPEED = 40; // 最大速度
 const int MIN_SPEED = 0;   // 最小速度
 
 // Global Variable
@@ -31,8 +35,17 @@ void setup() {
   pixy.init();
 
   // Motor
-  pinMode(motorLPin, OUTPUT);
-  pinMode(motorRPin, OUTPUT);
+  for (int i = 0; i < 2; i++) {
+    pinMode(inApin[i], OUTPUT);
+    pinMode(inBpin[i], OUTPUT);
+    pinMode(pwmpin[i], OUTPUT);
+  }
+
+  // 初始化馬達為制動狀態
+  for (int i = 0; i < 2; i++) {
+    digitalWrite(inApin[i], LOW);
+    digitalWrite(inBpin[i], LOW);
+  }
 }
 
 
@@ -48,43 +61,61 @@ int getPositionDifference(int xPosition, int middlePosition = 157) {
 
 
 // Motor Control
-void motorControl(int speed, int rotationOffset) {
-  rotationOffset = map(rotationOffset, -128, 128, -50, 50); //減少 roatationOffset 的影響
+void motorControl(int targetSpeed, int rotationOffset) {
+  // 将旋转偏移映射到较小的范围
+  rotationOffset = map(rotationOffset, -128, 128, -50, 50); 
 
+  // 软启动
+  int startSpeed = 180; // 假设启动速度为目标速度的150%，但不超过100
+  applyMotorSpeed(startSpeed, rotationOffset);
+  delay(200); // 短暂的高速运行以启动马达
+
+  // 减速到目标速度
+  applyMotorSpeed(targetSpeed, rotationOffset);
+}
+
+void applyMotorSpeed(int speed, int rotationOffset) {
   int speedL = speed + rotationOffset;
   int speedR = speed - rotationOffset;
 
-  // 保证速度值在合理范围内（0-100）
+  // 保证速度值在合理范围内
   speedL = constrain(speedL, 0, 100);
   speedR = constrain(speedR, 0, 100);
 
-  // 将速度范围从 0-100 映射到 PWM 范围 MIN_SPEED-MAX_SPEED
+  // 映射到 PWM 范围
   speedL = map(speedL, 0, 100, MIN_SPEED, MAX_SPEED);
   speedR = map(speedR, 0, 100, MIN_SPEED, MAX_SPEED);
 
-  // 透過 Function 打印 PWM 值
-  printCurrentSpeed(speedL, speedR);
+  // 打印 PWM 值
+  // printCurrentSpeed(speedL, speedR);
   
-  // 寫入速度
-  analogWrite(motorLPin, speedL);
-  analogWrite(motorRPin, speedR);
+  // 控制马达
+  motorGo(0, CW, abs(speedL));
+  motorGo(1, CCW, abs(speedR));
 }
 
-void motorControlOld(int speedL, int speedR) { // 舊版 自行輸入左右輪速度
-  const int maxSpeed = 255;
-  const int minSpeed = 0;
+// Monster Moto Shield
 
-  speedL = map(speedL, 0, 100, minSpeed, maxSpeed);
-  speedR = map(speedR, 0, 100, minSpeed, maxSpeed);
+void motorOff(int motor) {
+  digitalWrite(inApin[motor], LOW);
+  digitalWrite(inBpin[motor], LOW);
+  analogWrite(pwmpin[motor], 0);
+}
 
-  analogWrite(motorLPin, speedL);
-  analogWrite(motorRPin, speedR);
+void motorGo(uint8_t motor, uint8_t direct, uint8_t pwm) {
+  if (motor <= 1) {
+    if (direct <= 2) {
+      digitalWrite(inApin[motor], direct == CW);
+      digitalWrite(inBpin[motor], direct == CCW);
+      analogWrite(pwmpin[motor], pwm);
+    }
+  }
 }
 
 
 // Pig Mode
 void randomWalk() {
-    int walkSpeed = 50;
+    int walkSpeed = MAX_SPEED;
     int totalWalkDuration = random(2000, 5000); // 总行走持续时间（毫秒）
     int decisionInterval = random(500, 1500); // 偏移决策间隔（毫秒）
 
@@ -121,7 +152,7 @@ void followCarrot() {
     
     if (blockCount > 0) {
         for (int i = 0; i < blockCount; i++) {
-            if (pixy.ccc.blocks[i].m_signature == CARROT_SIGNATURE) {
+            if (pixy.ccc.blocks[i].m_signature == CARROT_SIGNATURE-1) {
                 // 计算中心偏移
                 int xOffset = pixy.ccc.blocks[i].m_x - (pixy.frameWidth / 2);
                 int yOffset = pixy.ccc.blocks[i].m_y - (pixy.frameHeight / 2);
@@ -130,7 +161,7 @@ void followCarrot() {
                 if (abs(xOffset) < 20 && abs(yOffset) < 20) {
                     motorControl(0, 0); // 停止
                 } else {
-                    motorControl(50, xOffset); // 调整速度和方向
+                    motorControl(MAX_SPEED, xOffset); // 调整速度和方向
                 }
             }
         }
@@ -210,6 +241,5 @@ void printCurrentSpeedWithSymbol(int speedL, int speedR) { // 用符號列印出
 
 // Main
 void loop() {
-  followCarrot();
 
 }
